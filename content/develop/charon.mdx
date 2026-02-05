@@ -1,0 +1,67 @@
+---
+title: Charon
+year: "2024"
+tech: Scala 3 · Cats Effect · Http4s · I2P · ZKP
+status: Active
+description: I2Pネットワーク上の匿名エフェメラルチャット＆ファイル共有
+---
+
+## Overview
+
+Charonは、I2P匿名ネットワーク上で動作するエフェメラルなチャット・ファイル共有アプリケーション。
+すべてのユーザーが「渡し守（カロン）」となり、冥界の川Styxを介してメッセージとファイルを運ぶ——
+P2Pの本質を、ギリシャ神話の世界観で実装したプロジェクト。
+
+> *冥界の川Styxを渡るには、渡し守に渡し賃を払わなければならない*
+
+## Concepts
+
+- **Charon** — 各ユーザー（渡し守）
+- **Styx** — ネットワーク（冥界の川）
+- **Obol** — マグネットリンク（渡し賃）
+
+## Features
+
+- **Ephemeral Rooms** — 自動消滅するチャットルーム。サーバー再起動で全データが消える
+- **Anonymous Identity** — ルームごとに異なるID。ルームを跨いだ追跡は不可能
+- **File Sharing** — 暗号化チャンク分散による最大300MBのファイル共有
+- **Zero Knowledge Proof** — 「誰であるか」を明かさず「資格があること」だけを証明
+- **No Tracking** — Cookie なし、ログなし、localStorage なし
+- **I2P Native** — I2P匿名ネットワーク上で動作。IPアドレスは完全に秘匿
+
+## Architecture
+
+```
+┌──────────┐    I2P (Styx)    ┌──────────┐
+│  Charon  │◄────────────────►│  Charon  │
+│ (Node A) │   encrypted p2p  │ (Node B) │
+└────┬─────┘                  └─────┬────┘
+     │                              │
+     ▼                              ▼
+┌──────────┐                  ┌──────────┐
+│ In-Memory│                  │ In-Memory│
+│  Storage │                  │  Storage │
+└──────────┘                  └──────────┘
+
+File Sharing:
+┌────────┐    AES encrypt    ┌────────────┐    distribute    ┌─────────┐
+│  File  │──────────────────►│  256KB     │────────────────►│  Nodes  │
+│        │                   │  Chunks    │                  │ (random)│
+└────────┘                   └────────────┘                  └─────────┘
+                                                  ▲
+                                  .obol file ─────┘
+                                  (magnet link = 渡し賃)
+```
+
+## Tech Stack
+
+- Scala 3.3 (Functional Programming)
+- Cats Effect (Pure FP Runtime)
+- Http4s (HTTP + WebSocket)
+- Doobie (Database Access)
+- I2P SAM API (Anonymous Networking)
+- ZKP / Bulletproofs (Zero Knowledge Proof)
+
+## Links
+
+- [GitHub](https://github.com/rxxuzi/charon)
