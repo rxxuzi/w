@@ -4,32 +4,13 @@ import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
 import { GrainGradient } from "@paper-design/shaders-react"
 import { Header } from "@/components/Header"
+import { Footer } from "@/components/Footer"
 
 const subdomains = [
   {
     name: "AI",
     url: "https://ai.rxxuzi.com",
     desc: "LLMs, deep learning, transformers",
-  },
-  {
-    name: "Security",
-    url: "https://security.rxxuzi.com",
-    desc: "Threat detection, cryptography",
-  },
-  {
-    name: "Quantum",
-    url: "https://quantum.rxxuzi.com",
-    desc: "Semiconductors, quantum computing",
-  },
-  {
-    name: "Design",
-    url: "https://design.rxxuzi.com",
-    desc: "Brutalism, raw aesthetics",
-  },
-  {
-    name: "Web3",
-    url: "https://web3.rxxuzi.com",
-    desc: "Blockchain, smart contracts",
   },
   {
     name: "Lab",
@@ -50,10 +31,10 @@ export default function ExplorePage() {
   const isDark = theme === "dark"
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground font-sans overflow-hidden">
-      {/* GrainGradient — fixed bg, dimmed so text is readable */}
+    <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
+      {/* GrainGradient background */}
       <div
-        className="fixed inset-0 opacity-0 transition-opacity duration-[2000ms]"
+        className="fixed inset-0 transition-opacity duration-[2000ms]"
         style={{ opacity: mounted ? 0.45 : 0 }}
       >
         <GrainGradient
@@ -72,8 +53,7 @@ export default function ExplorePage() {
         />
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col">
+      <div className="relative z-10 flex flex-col min-h-screen">
         <Header showBack title="Explore" />
 
         {/* Hero */}
@@ -86,7 +66,7 @@ export default function ExplorePage() {
             Explore
           </h1>
           <p
-            className={`text-xs tracking-[0.2em] text-foreground/40 mt-6 transition-all duration-700 delay-300 ${
+            className={`font-mono text-[10px] tracking-[0.3em] uppercase opacity-40 mt-6 transition-all duration-700 delay-300 ${
               mounted ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -95,7 +75,7 @@ export default function ExplorePage() {
         </div>
 
         {/* List */}
-        <div className="mt-auto px-6 md:px-12 lg:px-24 pb-12 md:pb-20">
+        <div className="flex-1 px-6 md:px-12 lg:px-24 pb-12 md:pb-20">
           <div className="max-w-5xl">
             {subdomains.map((s, i) => (
               <a
@@ -119,7 +99,7 @@ export default function ExplorePage() {
                 </span>
 
                 <span
-                  className={`hidden md:block text-xs text-foreground/40 transition-opacity duration-300 ${
+                  className={`hidden md:block font-mono text-xs opacity-40 transition-opacity duration-300 ${
                     hovered !== null && hovered !== i ? "opacity-10" : "opacity-100"
                   }`}
                 >
@@ -129,7 +109,7 @@ export default function ExplorePage() {
                 <span className="flex-1" />
 
                 <span
-                  className={`text-xs text-foreground/30 group-hover:text-foreground/70 transition-all duration-300 shrink-0 ${
+                  className={`font-mono text-xs opacity-30 group-hover:opacity-70 transition-all duration-300 shrink-0 ${
                     hovered !== null && hovered !== i ? "opacity-10" : "opacity-100"
                   }`}
                 >
@@ -139,6 +119,8 @@ export default function ExplorePage() {
             ))}
           </div>
         </div>
+
+        <Footer position="relative" />
       </div>
     </div>
   )

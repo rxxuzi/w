@@ -13,33 +13,49 @@ export default function NotFound() {
 
   return (
     <div className={`min-h-screen bg-black text-white flex items-center justify-center px-6 transition-all duration-1000 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
-      <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-        <div className="space-y-8">
-          <h1 className="text-8xl md:text-9xl font-black leading-none">
-            404
-          </h1>
-          <p className="text-2xl md:text-3xl font-bold">
-            Page not found
-          </p>
-          <p className="font-mono text-sm md:text-base opacity-70 max-w-md">
-            The page you're looking for doesn't exist or has been moved.
-          </p>
-          <Link 
-            href="/"
-            className="inline-block border-2 border-white px-8 py-4 text-lg font-bold hover:bg-white hover:text-black transition-all duration-300"
-          >
-            Back to Home
-          </Link>
-        </div>
-
-        <div className="flex justify-center lg:justify-end">
+      {/* モバイル: Ghostyが右上に浮いてる感じ */}
+      <div className="relative max-w-6xl w-full">
+        {/* Ghosty - モバイルでは右上に絶対配置、デスクトップでは通常配置 */}
+        <div className="lg:hidden absolute -top-16 right-0 z-0">
           <Image
             src="/images/404.png"
             alt="404 Ghost"
-            width={400}
-            height={400}
-            className="w-64 md:w-96 h-auto animate-float"
+            width={200}
+            height={200}
+            className="w-32 h-auto animate-float opacity-80"
           />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+          {/* テキスト */}
+          <div className="space-y-6 lg:space-y-8 relative z-10">
+            <h1 className="text-8xl md:text-9xl font-black leading-none">
+              404
+            </h1>
+            <p className="text-xl md:text-2xl lg:text-3xl font-bold">
+              Page not found
+            </p>
+            <p className="font-mono text-sm md:text-base opacity-70 max-w-md">
+              The page you're looking for doesn't exist or has been moved.
+            </p>
+            <Link
+              href="/"
+              className="inline-block border-2 border-white px-6 py-3 md:px-8 md:py-4 text-base md:text-lg font-bold hover:bg-white hover:text-black transition-all duration-300"
+            >
+              Back to Home
+            </Link>
+          </div>
+
+          {/* Ghosty - デスクトップのみ表示 */}
+          <div className="hidden lg:flex justify-end">
+            <Image
+              src="/images/404.png"
+              alt="404 Ghost"
+              width={400}
+              height={400}
+              className="w-96 h-auto animate-float"
+            />
+          </div>
         </div>
       </div>
 

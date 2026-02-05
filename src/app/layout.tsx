@@ -17,10 +17,57 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono"
 });
 
+const siteConfig = {
+  name: 'rxxuzi',
+  url: 'https://rxxuzi.com',
+  description: 'Security & AI Developer. Building tools for the future.',
+  author: 'rxxuzi',
+}
+
 export const metadata: Metadata = {
-  title: 'rxxuzi.com — Portfolio',
-  description: 'Creative developer portfolio',
-  generator: 'v0.app',
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: 'rxxuzi.com',
+    template: '%s | rxxuzi.com',
+  },
+  description: siteConfig.description,
+  keywords: ['developer', 'security', 'AI', 'portfolio', 'rxxuzi', 'programming'],
+  authors: [{ name: siteConfig.author, url: siteConfig.url }],
+  creator: siteConfig.author,
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    title: 'rxxuzi.com',
+    description: siteConfig.description,
+    images: [
+      {
+        url: '/og?title=rxxuzi.com',
+        width: 1200,
+        height: 630,
+        alt: 'rxxuzi.com',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'rxxuzi.com',
+    description: siteConfig.description,
+    images: ['/og?title=rxxuzi.com'],
+    creator: '@rxxuzi',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   icons: {
     icon: [
       {

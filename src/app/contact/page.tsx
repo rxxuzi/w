@@ -27,7 +27,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
+    <div className="min-h-screen bg-background text-foreground font-sans flex flex-col">
       {/* Top nav */}
       <nav className="flex items-center justify-between px-6 py-4 md:px-12">
         <Link href="/" className="text-sm hover:opacity-50 transition-opacity">
@@ -39,7 +39,7 @@ export default function ContactPage() {
       </nav>
 
       {/* Main */}
-      <main className="px-6 md:px-12 lg:px-24 pt-16 pb-24 md:pt-24 md:pb-32">
+      <main className="flex-1 px-6 md:px-12 lg:px-24 pt-16 pb-24 md:pt-24 md:pb-32">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-start">
 
           {/* Left: Title */}
@@ -111,7 +111,7 @@ export default function ContactPage() {
         </div>
       </main>
 
-      <Footer />
+      <Footer position="relative" />
     </div>
   )
 }

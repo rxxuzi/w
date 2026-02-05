@@ -40,7 +40,7 @@ export function Header({ title, showBack = false, backHref = "/", minimal = fals
 
         <div className="flex items-center gap-4">
           <span className="font-sans text-xs uppercase tracking-widest opacity-70">
-            {title || 'portfolio · 2025'}
+            {title || ''}
           </span>
           <ThemeToggle />
         </div>

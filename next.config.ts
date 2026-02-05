@@ -13,20 +13,6 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-  async redirects() {
-    return [
-      {
-        source: '/blog',
-        destination: 'https://blog.rxxuzi.com',
-        permanent: true,
-      },
-      {
-        source: '/blog/:path*',
-        destination: 'https://blog.rxxuzi.com/:path*',
-        permanent: true,
-      },
-    ]
-  },
 };
 
 export default nextConfig;

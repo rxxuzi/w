@@ -37,39 +37,6 @@ npm run dev
 npm run build
 ```
 
-## Environment Variables
-
-Create `.env.local` with:
-
-```env
-# Cloudflare R2
-R2_ACCOUNT_ID=
-R2_ACCESS_KEY_ID=
-R2_SECRET_ACCESS_KEY=
-R2_BUCKET_NAME=
-
-# Admin auth
-ADMIN_MAIL=
-ADMIN_PASS=
-JWT_SECRET=
-```
-
-## Adding Projects
-
-Create MDX files in `content/develop/`:
-
-```mdx
----
-title: Project Name
-description: Short description
-year: "2024"
-status: active
-tech: React, TypeScript
----
-
-Content here...
-```
-
 ## License
 
 MIT

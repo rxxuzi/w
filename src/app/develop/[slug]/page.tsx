@@ -18,9 +18,24 @@ export async function generateMetadata({ params }: PageProps) {
   const project = getProjectBySlug('develop', slug)
   if (!project) return { title: 'Not Found' }
 
+  const title = project.title
+  const description = project.description
+
   return {
-    title: project.title,
-    description: project.description,
+    title,
+    description,
+    openGraph: {
+      title: `${title} | rxxuzi.com`,
+      description,
+      type: 'article',
+      images: [`/og?title=${encodeURIComponent(title)}`],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | rxxuzi.com`,
+      description,
+      images: [`/og?title=${encodeURIComponent(title)}`],
+    },
   }
 }
 
