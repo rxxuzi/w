@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAuthenticated } from '@/lib/auth'
-import { listFilesInFolder, uploadFile, deleteFile, createFolder } from '@/lib/r2'
+import { listFilesInFolder, uploadFile, deleteFile, createFolder, deleteFolder } from '@/lib/r2'
 
 export async function GET(request: NextRequest) {
   if (!await isAuthenticated()) {
@@ -69,8 +69,18 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    const { key } = await request.json()
+    const { key, folder } = await request.json()
 
+    // Delete folder
+    if (folder) {
+      const result = await deleteFolder(folder)
+      if (result.errors > 0 && result.deleted === 0) {
+        return NextResponse.json({ error: 'Delete folder failed' }, { status: 500 })
+      }
+      return NextResponse.json({ success: true, deleted: result.deleted })
+    }
+
+    // Delete single file
     if (!key) {
       return NextResponse.json({ error: 'No key provided' }, { status: 400 })
     }

@@ -1,19 +1,32 @@
 import { AwsClient } from 'aws4fetch'
 
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID!
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID!
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY!
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'rxxuzi-r2'
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://fx.rxxuzi.com'
 
-const r2 = new AwsClient({
-  accessKeyId: R2_ACCESS_KEY_ID,
-  secretAccessKey: R2_SECRET_ACCESS_KEY,
-  service: 's3',
-  region: 'auto',
-})
+function getR2Client() {
+  if (!R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_ACCOUNT_ID) {
+    console.error('R2 credentials missing:', {
+      hasAccountId: !!R2_ACCOUNT_ID,
+      hasAccessKey: !!R2_ACCESS_KEY_ID,
+      hasSecretKey: !!R2_SECRET_ACCESS_KEY,
+    })
+    return null
+  }
+  return new AwsClient({
+    accessKeyId: R2_ACCESS_KEY_ID,
+    secretAccessKey: R2_SECRET_ACCESS_KEY,
+    service: 's3',
+    region: 'auto',
+  })
+}
 
-const R2_ENDPOINT = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+function getR2Endpoint() {
+  if (!R2_ACCOUNT_ID) return null
+  return `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+}
 
 export interface R2File {
   name: string
@@ -115,6 +128,14 @@ function parseListResponse(xml: string): { contents: S3Object[], prefixes: S3Com
 
 export async function listFilesInFolder(prefix?: string): Promise<R2ListResult> {
   try {
+    const r2 = getR2Client()
+    const R2_ENDPOINT = getR2Endpoint()
+
+    if (!r2 || !R2_ENDPOINT) {
+      console.error('R2 not configured')
+      return { files: [], folders: [] }
+    }
+
     const normalizedPrefix = prefix ? (prefix.endsWith('/') ? prefix : `${prefix}/`) : ''
 
     const params = new URLSearchParams({
@@ -167,6 +188,14 @@ export async function listFilesInFolder(prefix?: string): Promise<R2ListResult> 
 // Legacy function for /files page (flat list)
 export async function listFiles(prefix?: string): Promise<R2File[]> {
   try {
+    const r2 = getR2Client()
+    const R2_ENDPOINT = getR2Endpoint()
+
+    if (!r2 || !R2_ENDPOINT) {
+      console.error('R2 not configured')
+      return []
+    }
+
     const params = new URLSearchParams({ 'list-type': '2' })
     if (prefix) {
       params.set('prefix', prefix)
@@ -206,13 +235,33 @@ export async function listFiles(prefix?: string): Promise<R2File[]> {
 
 export async function uploadFile(key: string, body: Buffer | Uint8Array, contentType?: string): Promise<boolean> {
   try {
-    const url = `${R2_ENDPOINT}/${R2_BUCKET_NAME}/${key}`
+    const r2 = getR2Client()
+    const R2_ENDPOINT = getR2Endpoint()
+
+    if (!r2 || !R2_ENDPOINT) {
+      console.error('R2 not configured')
+      return false
+    }
+
+    const encodedKey = key.split('/').map(encodeURIComponent).join('/')
+    const url = `${R2_ENDPOINT}/${R2_BUCKET_NAME}/${encodedKey}`
+    console.log('R2 upload URL:', url)
     const response = await r2.fetch(url, {
       method: 'PUT',
-      body: body as BodyInit,
-      headers: contentType ? { 'Content-Type': contentType } : undefined,
+      body: body,
+      headers: {
+        'Content-Type': contentType || 'application/octet-stream',
+        'Content-Length': body.length.toString(),
+      },
     })
-    return response.ok
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('R2 upload failed:', response.status, response.statusText, errorText)
+      return false
+    }
+
+    return true
   } catch (error) {
     console.error('R2 upload error:', error)
     return false
@@ -221,6 +270,14 @@ export async function uploadFile(key: string, body: Buffer | Uint8Array, content
 
 export async function deleteFile(key: string): Promise<boolean> {
   try {
+    const r2 = getR2Client()
+    const R2_ENDPOINT = getR2Endpoint()
+
+    if (!r2 || !R2_ENDPOINT) {
+      console.error('R2 not configured')
+      return false
+    }
+
     const url = `${R2_ENDPOINT}/${R2_BUCKET_NAME}/${key}`
     const response = await r2.fetch(url, { method: 'DELETE' })
     return response.ok
@@ -237,4 +294,51 @@ export async function createFolder(path: string): Promise<boolean> {
 
 export function getPublicUrl(key: string): string {
   return `${R2_PUBLIC_URL}/${key}`
+}
+
+export async function deleteFolder(prefix: string): Promise<{ deleted: number; errors: number }> {
+  const r2 = getR2Client()
+  const R2_ENDPOINT = getR2Endpoint()
+
+  if (!r2 || !R2_ENDPOINT) {
+    console.error('R2 not configured')
+    return { deleted: 0, errors: 0 }
+  }
+
+  const normalizedPrefix = prefix.endsWith('/') ? prefix : `${prefix}/`
+
+  try {
+    // List all files in the folder
+    const params = new URLSearchParams({ 'list-type': '2', 'prefix': normalizedPrefix })
+    const url = `${R2_ENDPOINT}/${R2_BUCKET_NAME}?${params.toString()}`
+    const response = await r2.fetch(url)
+
+    if (!response.ok) {
+      throw new Error(`R2 API error: ${response.status}`)
+    }
+
+    const xml = await response.text()
+    const { contents } = parseListResponse(xml)
+
+    let deleted = 0
+    let errors = 0
+
+    // Delete all files
+    for (const obj of contents) {
+      if (obj.Key) {
+        const deleteUrl = `${R2_ENDPOINT}/${R2_BUCKET_NAME}/${obj.Key}`
+        const deleteRes = await r2.fetch(deleteUrl, { method: 'DELETE' })
+        if (deleteRes.ok) {
+          deleted++
+        } else {
+          errors++
+        }
+      }
+    }
+
+    return { deleted, errors }
+  } catch (error) {
+    console.error('R2 delete folder error:', error)
+    return { deleted: 0, errors: 1 }
+  }
 }

@@ -77,6 +77,7 @@ export function FileManager() {
   const [newFolderName, setNewFolderName] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: R2File } | null>(null)
+  const [folderContextMenu, setFolderContextMenu] = useState<{ x: number; y: number; folder: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const isMobile = useIsMobile()
@@ -107,7 +108,10 @@ export function FileManager() {
 
   // Close context menu on click outside
   useEffect(() => {
-    const handleClick = () => setContextMenu(null)
+    const handleClick = () => {
+      setContextMenu(null)
+      setFolderContextMenu(null)
+    }
     document.addEventListener('click', handleClick)
     return () => document.removeEventListener('click', handleClick)
   }, [])
@@ -225,6 +229,47 @@ export function FileManager() {
         onClick: () => {},
       },
     })
+  }
+
+  const handleDeleteFolder = async (folderName: string) => {
+    const folderPath = currentPath ? `${currentPath}/${folderName}` : folderName
+
+    try {
+      const res = await fetch('/api/r2', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: folderPath }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        toast.success(`Folder deleted (${data.deleted} files removed)`)
+        fetchFiles()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to delete folder')
+      }
+    } catch {
+      toast.error('Failed to delete folder')
+    }
+  }
+
+  const confirmDeleteFolder = (folderName: string) => {
+    toast(`Delete folder "${folderName}" and all its contents?`, {
+      action: {
+        label: 'Delete',
+        onClick: () => handleDeleteFolder(folderName),
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+    })
+  }
+
+  const handleFolderContextMenu = (e: React.MouseEvent, folder: string) => {
+    e.preventDefault()
+    setFolderContextMenu({ x: e.clientX, y: e.clientY, folder })
   }
 
   const handleLogout = async () => {
@@ -583,16 +628,40 @@ export function FileManager() {
                   <h2 className="text-sm font-medium mb-3 px-1">Folders</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                     {filteredFolders.map((folder) => (
-                      <button
+                      <div
                         key={folder}
+                        onContextMenu={(e) => handleFolderContextMenu(e, folder)}
+                        className="group relative flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent hover:border-accent transition-all text-left cursor-pointer"
                         onClick={() => navigateToFolder(folder)}
-                        className="group flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent hover:border-accent transition-all text-left"
                       >
                         <Folder className="h-10 w-10 text-blue-500 shrink-0" />
                         <span className="text-sm font-medium truncate group-hover:text-accent-foreground">
                           {folder}
                         </span>
-                      </button>
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="secondary" size="icon" className="h-7 w-7 shadow">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigateToFolder(folder) }}>
+                                <Folder className="h-4 w-4 mr-2" />
+                                Open
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); confirmDeleteFolder(folder) }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </section>
@@ -788,6 +857,7 @@ export function FileManager() {
                       key={folder}
                       className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
                       onClick={() => navigateToFolder(folder)}
+                      onContextMenu={(e) => handleFolderContextMenu(e, folder)}
                     >
                       <td className="p-3"></td>
                       <td className="p-3">
@@ -799,7 +869,29 @@ export function FileManager() {
                       <td className="p-3 hidden md:table-cell text-muted-foreground">Folder</td>
                       <td className="p-3 hidden md:table-cell text-muted-foreground">—</td>
                       <td className="p-3 hidden lg:table-cell text-muted-foreground">—</td>
-                      <td className="p-3"></td>
+                      <td className="p-3">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigateToFolder(folder) }}>
+                              <Folder className="h-4 w-4 mr-2" />
+                              Open
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={(e) => { e.stopPropagation(); confirmDeleteFolder(folder) }}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
                     </tr>
                   ))}
 
@@ -898,7 +990,7 @@ export function FileManager() {
         )}
       </main>
 
-      {/* Context menu */}
+      {/* File context menu */}
       {contextMenu && (
         <div
           className="fixed bg-popover border rounded-lg shadow-lg py-1 z-50 min-w-48"
@@ -932,6 +1024,30 @@ export function FileManager() {
           <div className="border-t my-1" />
           <button
             onClick={() => { confirmDelete([contextMenu.file.key]); setContextMenu(null) }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </button>
+        </div>
+      )}
+
+      {/* Folder context menu */}
+      {folderContextMenu && (
+        <div
+          className="fixed bg-popover border rounded-lg shadow-lg py-1 z-50 min-w-48"
+          style={{ left: folderContextMenu.x, top: folderContextMenu.y }}
+        >
+          <button
+            onClick={() => { navigateToFolder(folderContextMenu.folder); setFolderContextMenu(null) }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
+          >
+            <Folder className="h-4 w-4" />
+            Open
+          </button>
+          <div className="border-t my-1" />
+          <button
+            onClick={() => { confirmDeleteFolder(folderContextMenu.folder); setFolderContextMenu(null) }}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
           >
             <Trash2 className="h-4 w-4" />
@@ -974,6 +1090,7 @@ export function FileManager() {
       {/* Preview modal */}
       <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
         <DialogContent className="max-w-5xl p-0 overflow-hidden">
+          <DialogTitle className="sr-only">{previewFile?.name || 'Preview'}</DialogTitle>
           <div className="relative">
             {previewFile?.type === 'VIDEO' ? (
               <video
