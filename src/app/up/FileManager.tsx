@@ -51,7 +51,9 @@ import {
   Link,
   Eye,
   Menu,
-  X
+  X,
+  Pencil,
+  FolderInput
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -78,6 +80,9 @@ export function FileManager() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: R2File } | null>(null)
   const [folderContextMenu, setFolderContextMenu] = useState<{ x: number; y: number; folder: string } | null>(null)
+  const [renameDialog, setRenameDialog] = useState<{ file: R2File; newName: string } | null>(null)
+  const [moveDialog, setMoveDialog] = useState<{ file: R2File } | null>(null)
+  const [availableFolders, setAvailableFolders] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const isMobile = useIsMobile()
@@ -265,6 +270,82 @@ export function FileManager() {
         onClick: () => {},
       },
     })
+  }
+
+  const handleRename = async () => {
+    if (!renameDialog) return
+
+    const { file, newName } = renameDialog
+    if (!newName.trim() || newName === file.name) {
+      setRenameDialog(null)
+      return
+    }
+
+    // Build new key
+    const pathParts = file.key.split('/')
+    pathParts.pop() // Remove old filename
+    const newKey = pathParts.length > 0
+      ? `${pathParts.join('/')}/${newName}`
+      : newName
+
+    try {
+      const res = await fetch('/api/r2', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'rename', key: file.key, newKey }),
+      })
+
+      if (res.ok) {
+        toast.success('File renamed')
+        fetchFiles()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Rename failed')
+      }
+    } catch {
+      toast.error('Rename failed')
+    }
+
+    setRenameDialog(null)
+  }
+
+  const openMoveDialog = async (file: R2File) => {
+    // Fetch root folders for move destination
+    try {
+      const res = await fetch('/api/r2?prefix=')
+      const data = await res.json()
+      setAvailableFolders(['(root)', ...data.folders || []])
+      setMoveDialog({ file })
+    } catch {
+      toast.error('Failed to load folders')
+    }
+  }
+
+  const handleMove = async (destFolder: string) => {
+    if (!moveDialog) return
+
+    const { file } = moveDialog
+    const dest = destFolder === '(root)' ? '' : destFolder
+
+    try {
+      const res = await fetch('/api/r2', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'move', key: file.key, destFolder: dest }),
+      })
+
+      if (res.ok) {
+        toast.success(`Moved to ${destFolder}`)
+        fetchFiles()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Move failed')
+      }
+    } catch {
+      toast.error('Move failed')
+    }
+
+    setMoveDialog(null)
   }
 
   const handleFolderContextMenu = (e: React.MouseEvent, folder: string) => {
@@ -757,6 +838,15 @@ export function FileManager() {
                                 Copy link
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => setRenameDialog({ file, newName: file.name })}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Rename
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openMoveDialog(file)}>
+                                <FolderInput className="h-4 w-4 mr-2" />
+                                Move to...
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => confirmDelete([file.key])}
                                 className="text-destructive focus:text-destructive"
@@ -948,6 +1038,15 @@ export function FileManager() {
                               Copy link
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setRenameDialog({ file, newName: file.name })}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openMoveDialog(file)}>
+                              <FolderInput className="h-4 w-4 mr-2" />
+                              Move to...
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => confirmDelete([file.key])}
                               className="text-destructive focus:text-destructive"
@@ -1020,6 +1119,21 @@ export function FileManager() {
           >
             <Copy className="h-4 w-4" />
             Copy link
+          </button>
+          <div className="border-t my-1" />
+          <button
+            onClick={() => { setRenameDialog({ file: contextMenu.file, newName: contextMenu.file.name }); setContextMenu(null) }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
+          >
+            <Pencil className="h-4 w-4" />
+            Rename
+          </button>
+          <button
+            onClick={() => { openMoveDialog(contextMenu.file); setContextMenu(null) }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
+          >
+            <FolderInput className="h-4 w-4" />
+            Move to...
           </button>
           <div className="border-t my-1" />
           <button
@@ -1127,6 +1241,65 @@ export function FileManager() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename dialog */}
+      <Dialog open={!!renameDialog} onOpenChange={() => setRenameDialog(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename</DialogTitle>
+            <DialogDescription>
+              Enter a new name for this file
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="new-name" className="sr-only">New name</Label>
+            <Input
+              id="new-name"
+              value={renameDialog?.newName || ''}
+              onChange={(e) => setRenameDialog(prev => prev ? { ...prev, newName: e.target.value } : null)}
+              onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+              autoFocus
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setRenameDialog(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRename} disabled={!renameDialog?.newName.trim()}>
+              Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move dialog */}
+      <Dialog open={!!moveDialog} onOpenChange={() => setMoveDialog(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Move to</DialogTitle>
+            <DialogDescription>
+              Select destination folder for "{moveDialog?.file.name}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2 max-h-64 overflow-y-auto">
+            {availableFolders.map(folder => (
+              <button
+                key={folder}
+                onClick={() => handleMove(folder)}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors text-left"
+              >
+                <Folder className="h-4 w-4 text-muted-foreground" />
+                <span className="truncate">{folder}</span>
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveDialog(null)}>
+              Cancel
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -246,12 +246,13 @@ export async function uploadFile(key: string, body: Buffer | Uint8Array, content
     const encodedKey = key.split('/').map(encodeURIComponent).join('/')
     const url = `${R2_ENDPOINT}/${R2_BUCKET_NAME}/${encodedKey}`
     console.log('R2 upload URL:', url)
+    // Convert to ArrayBuffer for proper typing
+    const arrayBuffer = body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) as ArrayBuffer
     const response = await r2.fetch(url, {
       method: 'PUT',
-      body: body,
+      body: arrayBuffer,
       headers: {
         'Content-Type': contentType || 'application/octet-stream',
-        'Content-Length': body.length.toString(),
       },
     })
 
@@ -341,4 +342,60 @@ export async function deleteFolder(prefix: string): Promise<{ deleted: number; e
     console.error('R2 delete folder error:', error)
     return { deleted: 0, errors: 1 }
   }
+}
+
+export async function copyFile(sourceKey: string, destKey: string): Promise<boolean> {
+  try {
+    const r2 = getR2Client()
+    const R2_ENDPOINT = getR2Endpoint()
+
+    if (!r2 || !R2_ENDPOINT) {
+      console.error('R2 not configured')
+      return false
+    }
+
+    const encodedDestKey = destKey.split('/').map(encodeURIComponent).join('/')
+    const url = `${R2_ENDPOINT}/${R2_BUCKET_NAME}/${encodedDestKey}`
+
+    const response = await r2.fetch(url, {
+      method: 'PUT',
+      headers: {
+        'x-amz-copy-source': `/${R2_BUCKET_NAME}/${sourceKey}`,
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('R2 copy failed:', response.status, response.statusText, errorText)
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error('R2 copy error:', error)
+    return false
+  }
+}
+
+export async function renameFile(oldKey: string, newKey: string): Promise<boolean> {
+  // Copy to new key, then delete old
+  const copied = await copyFile(oldKey, newKey)
+  if (!copied) return false
+
+  const deleted = await deleteFile(oldKey)
+  if (!deleted) {
+    // Rollback: delete the copy if we couldn't delete original
+    await deleteFile(newKey)
+    return false
+  }
+
+  return true
+}
+
+export async function moveFile(sourceKey: string, destFolder: string): Promise<boolean> {
+  const fileName = sourceKey.split('/').pop()
+  if (!fileName) return false
+
+  const destKey = destFolder ? `${destFolder}/${fileName}` : fileName
+  return renameFile(sourceKey, destKey)
 }

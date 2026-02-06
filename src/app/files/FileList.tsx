@@ -44,7 +44,9 @@ export function FileList({ files }: FileListProps) {
     <>
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-1">
-        {files.map((file, index) => (
+        {files.map((file, index) => {
+          const hasDarkBg = ['IMG', 'VIDEO', 'PDF'].includes(file.type)
+          return (
           <button
             key={file.key}
             onClick={() => isViewable(file.type) ? setSelectedIndex(index) : window.open(file.url, '_blank')}
@@ -62,14 +64,25 @@ export function FileList({ files }: FileListProps) {
 
             {/* Video thumbnail */}
             {file.type === 'VIDEO' && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                <div className="text-4xl opacity-50 group-hover:opacity-100 transition-opacity">▶</div>
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-900 to-purple-950">
+                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 group-hover:scale-110 transition-all">
+                  <div className="text-white text-xl ml-1">▶</div>
+                </div>
               </div>
             )}
 
-            {/* Non-media files */}
-            {!['IMG', 'VIDEO'].includes(file.type) && (
-              <div className="absolute inset-0 flex items-center justify-center">
+            {/* PDF thumbnail */}
+            {file.type === 'PDF' && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-red-900 to-red-950">
+                <span className="font-mono text-3xl font-black text-white/30 group-hover:text-white/50 transition-colors">
+                  PDF
+                </span>
+              </div>
+            )}
+
+            {/* Other files */}
+            {!['IMG', 'VIDEO', 'PDF'].includes(file.type) && (
+              <div className="absolute inset-0 flex items-center justify-center bg-foreground/5">
                 <span className="font-mono text-2xl md:text-3xl font-black opacity-20 group-hover:opacity-40 transition-opacity">
                   {file.type}
                 </span>
@@ -80,7 +93,7 @@ export function FileList({ files }: FileListProps) {
             <div className="absolute inset-0 p-3 flex flex-col justify-between pointer-events-none">
               {/* Top: Index */}
               <div className="flex justify-between items-start">
-                <span className="font-mono text-[10px] opacity-50">
+                <span className={`font-mono text-[10px] ${hasDarkBg ? 'text-white/70 drop-shadow-sm' : 'opacity-50'}`}>
                   {String(index + 1).padStart(3, '0')}
                 </span>
                 {!isViewable(file.type) && (
@@ -89,11 +102,11 @@ export function FileList({ files }: FileListProps) {
               </div>
 
               {/* Bottom: Info */}
-              <div className={`${file.type === 'IMG' ? 'bg-black/60 -mx-3 -mb-3 p-3' : ''}`}>
-                <p className="font-mono text-[10px] tracking-wider truncate opacity-70 group-hover:opacity-100 transition-opacity">
+              <div className={hasDarkBg ? 'bg-black/60 -mx-3 -mb-3 p-3' : ''}>
+                <p className={`font-mono text-[10px] tracking-wider truncate transition-opacity ${hasDarkBg ? 'text-white opacity-90 group-hover:opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>
                   {file.name.toUpperCase()}
                 </p>
-                <p className="font-mono text-[9px] opacity-40 mt-0.5">
+                <p className={`font-mono text-[9px] mt-0.5 ${hasDarkBg ? 'text-white/60' : 'opacity-40'}`}>
                   {file.size} · {file.date}
                 </p>
               </div>
@@ -102,7 +115,7 @@ export function FileList({ files }: FileListProps) {
             {/* Hover border */}
             <div className="absolute inset-0 border border-transparent group-hover:border-foreground transition-colors pointer-events-none" />
           </button>
-        ))}
+        )})}
       </div>
 
       {/* Summary */}
@@ -158,32 +171,36 @@ export function FileList({ files }: FileListProps) {
             </div>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
+          {/* Content - click background to close */}
+          <div
+            className="flex-1 flex items-center justify-center p-4 relative overflow-hidden cursor-pointer"
+            onClick={() => setSelectedIndex(null)}
+          >
             {/* Navigation arrows */}
             {selectedIndex! > 0 && (
               <button
-                onClick={handlePrev}
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 hover:bg-white/10 transition-colors z-10"
+                onClick={(e) => { e.stopPropagation(); handlePrev() }}
+                className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-2 md:p-3 hover:bg-white/10 transition-colors z-10"
               >
-                <ChevronLeft className="w-8 h-8 text-white/70 hover:text-white" />
+                <ChevronLeft className="w-6 h-6 md:w-8 md:h-8 text-white/70 hover:text-white" />
               </button>
             )}
             {selectedIndex! < files.length - 1 && (
               <button
-                onClick={handleNext}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 hover:bg-white/10 transition-colors z-10"
+                onClick={(e) => { e.stopPropagation(); handleNext() }}
+                className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-2 md:p-3 hover:bg-white/10 transition-colors z-10"
               >
-                <ChevronRight className="w-8 h-8 text-white/70 hover:text-white" />
+                <ChevronRight className="w-6 h-6 md:w-8 md:h-8 text-white/70 hover:text-white" />
               </button>
             )}
 
-            {/* Media */}
+            {/* Media - stop propagation to prevent closing */}
             {selectedFile.type === 'IMG' && (
               <img
                 src={selectedFile.url}
                 alt={selectedFile.name}
-                className="max-w-full max-h-full object-contain"
+                className="max-w-full max-h-full object-contain cursor-default"
+                onClick={(e) => e.stopPropagation()}
               />
             )}
             {selectedFile.type === 'VIDEO' && (
@@ -192,6 +209,7 @@ export function FileList({ files }: FileListProps) {
                 controls
                 autoPlay
                 className="max-w-full max-h-full"
+                onClick={(e) => e.stopPropagation()}
               />
             )}
             {selectedFile.type === 'PDF' && (
@@ -199,6 +217,7 @@ export function FileList({ files }: FileListProps) {
                 src={selectedFile.url}
                 className="w-full h-full bg-white"
                 title={selectedFile.name}
+                onClick={(e) => e.stopPropagation()}
               />
             )}
           </div>
@@ -207,6 +226,7 @@ export function FileList({ files }: FileListProps) {
           <div className="p-4 md:p-6 border-t border-white/10 font-mono text-xs text-white/50 flex justify-between">
             <span>{selectedFile.type} · {selectedFile.size}</span>
             <span className="hidden sm:inline">← → NAVIGATE · ESC CLOSE</span>
+            <span className="sm:hidden">TAP TO CLOSE</span>
           </div>
         </div>
       )}

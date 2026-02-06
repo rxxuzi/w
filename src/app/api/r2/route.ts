@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAuthenticated } from '@/lib/auth'
-import { listFilesInFolder, uploadFile, deleteFile, createFolder, deleteFolder } from '@/lib/r2'
+import { listFilesInFolder, uploadFile, deleteFile, createFolder, deleteFolder, renameFile, moveFile } from '@/lib/r2'
 
 export async function GET(request: NextRequest) {
   if (!await isAuthenticated()) {
@@ -94,6 +94,37 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Delete error:', error)
+    return NextResponse.json({ error: String(error) }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  if (!await isAuthenticated()) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { action, key, newKey, destFolder } = await request.json()
+
+    if (action === 'rename' && key && newKey) {
+      const success = await renameFile(key, newKey)
+      if (!success) {
+        return NextResponse.json({ error: 'Rename failed' }, { status: 500 })
+      }
+      return NextResponse.json({ success: true, newKey })
+    }
+
+    if (action === 'move' && key && destFolder !== undefined) {
+      const success = await moveFile(key, destFolder)
+      if (!success) {
+        return NextResponse.json({ error: 'Move failed' }, { status: 500 })
+      }
+      return NextResponse.json({ success: true })
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+  } catch (error) {
+    console.error('Patch error:', error)
     return NextResponse.json({ error: String(error) }, { status: 500 })
   }
 }
